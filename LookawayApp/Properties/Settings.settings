@@ -1,0 +1,11 @@
+<?xml version='1.0' encoding='utf-8'?>
+<SettingsFile xmlns="http://schemas.microsoft.com/VisualStudio/2004/01/settings">
+    <Settings>
+        <Setting Name="FocusTime" Type="System.Int32" Scope="User">
+            <Value Profile="(Default)">1200</Value>
+        </Setting>
+        <Setting Name="RestTime" Type="System.Int32" Scope="User">
+            <Value Profile="(Default)">20</Value>
+        </Setting>
+    </Settings>
+</SettingsFile>

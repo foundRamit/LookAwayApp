@@ -1,0 +1,13 @@
+﻿<Window x:Class="LookawayApp.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Lookaway App"
+        Height="300"
+        Width="400">
+    <Grid>
+        <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
+            <Label x:Name="ModeLabel" Content="Focus Mode" FontSize="20" HorizontalAlignment="Center"/>
+            <Label x:Name="TimeLabel" Content="20:00" FontSize="36" HorizontalAlignment="Center"/>
+        </StackPanel>
+    </Grid>
+</Window>

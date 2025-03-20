@@ -1,0 +1,88 @@
+# Build output
+bin/
+obj/
+*.exe
+*.dll
+*.pdb
+*.appx
+*.appxbundle
+*.msix
+*.msixbundle
+*.nuspec
+*.snupkg
+
+# User-specific files
+.vscode/
+.idea/
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+
+# Cache files
+ipch/
+*.tmp
+*.cache
+*.csproj.user
+*.pidb
+*.ilk
+*.obj
+*.pch
+
+# Visual Studio Code
+.vscode/
+.vscode/**
+
+# Rider project files
+.idea/
+
+# VS Code settings
+*.code-workspace
+
+# Logs and databases
+*.log
+*.sql
+*.sqlite
+*.db
+
+# Test and coverage output
+TestResults/
+*.coverage
+*.coveragexml
+*.coveragejson
+
+# Publish output
+publish/
+out/
+
+# Dependency and package files
+*.nupkg
+*.snupkg
+project.lock.json
+project.assets.json
+
+# Tooling and temporary files
+.lock.json
+*.vsix
+service_dependencies.json
+appsettings.Development.json
+
+# Node.js files (if applicable)
+node_modules/
+package-lock.json
+yarn.lock
+
+# Windows icon cache
+Thumbs.db
+Desktop.ini
+
+# JetBrains Rider settings
+.idea/
+*.iml
+
+# Backup files
+*.bak
+*.old
+
+# Miscellaneous
+.DS_Store
