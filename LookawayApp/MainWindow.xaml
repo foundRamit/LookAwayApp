@@ -1,13 +1,15 @@
-﻿<Window x:Class="LookawayApp.MainWindow"
+﻿<Window x:Class="LookawayClone.MainWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="Lookaway App"
+        Title="Lookaway Clone"
         Height="300"
-        Width="400">
+        Width="400"
+        StateChanged="Window_StateChanged">
     <Grid>
         <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
             <Label x:Name="ModeLabel" Content="Focus Mode" FontSize="20" HorizontalAlignment="Center"/>
             <Label x:Name="TimeLabel" Content="20:00" FontSize="36" HorizontalAlignment="Center"/>
+            <Button x:Name="SettingsButton" Content="Settings" Click="SettingsButton_Click" Margin="10" Width="100"/>
         </StackPanel>
     </Grid>
 </Window>
