@@ -9,12 +9,45 @@ namespace LookawayApp
         private Timer _timer;
         private TimeSpan _timeLeft;
         private Timer _breakTimer;
+        private TimeSpan _breakDuration;
 
         public MainWindow()
         {
             InitializeComponent();
             _timeLeft = TimeSpan.FromMinutes(20); // Default 20-minute timer
+            _breakDuration = TimeSpan.FromSeconds(20); // Default 20 seconds break
             UpdateTimerDisplay();
+        }
+
+        private void SetTimer_Click(object sender, RoutedEventArgs e)
+        {
+            if (int.TryParse(WorkHoursInput.Text, out int hours) &&
+                int.TryParse(WorkMinutesInput.Text, out int minutes) &&
+                int.TryParse(WorkSecondsInput.Text, out int seconds) &&
+                (hours >= 0 || minutes > 0 || seconds > 0))
+            {
+                _timeLeft = new TimeSpan(hours, minutes, seconds);
+            }
+            else
+            {
+                MessageBox.Show("Please enter a valid work duration.");
+                return;
+            }
+
+            if (int.TryParse(BreakMinutesInput.Text, out int breakMinutes) &&
+                int.TryParse(BreakSecondsInput.Text, out int breakSeconds) &&
+                (breakMinutes >= 0 || breakSeconds > 0))
+            {
+                _breakDuration = new TimeSpan(0, breakMinutes, breakSeconds);
+            }
+            else
+            {
+                MessageBox.Show("Please enter a valid break duration.");
+                return;
+            }
+
+            UpdateTimerDisplay();
+            MessageBox.Show("Timer settings updated!");
         }
 
         private void StartButton_Click(object sender, RoutedEventArgs e)
@@ -72,7 +105,7 @@ namespace LookawayApp
 
         private void StartBreakTimer()
         {
-            _breakTimer = new Timer(20000); // 20 seconds for the break
+            _breakTimer = new Timer(_breakDuration.TotalMilliseconds);
             _breakTimer.Elapsed += BreakTimer_Elapsed;
             _breakTimer.Start();
         }
@@ -90,4 +123,3 @@ namespace LookawayApp
         }
     }
 }
-
