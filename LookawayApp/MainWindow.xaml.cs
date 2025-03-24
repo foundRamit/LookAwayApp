@@ -1,36 +1,43 @@
 ﻿using System;
-using System.Timers;
 using System.Windows;
+using System.Windows.Threading;
+using System.Windows.Forms;
+using System.Drawing;
 
 namespace LookawayApp
 {
     public partial class MainWindow : Window
     {
-        private Timer _timer;
-        private TimeSpan _timeLeft;
-        private Timer _breakTimer;
+        private DispatcherTimer _timer;
+        private TimeSpan _currentTime;
+        private TimeSpan _workDuration;
         private TimeSpan _breakDuration;
+        private bool _isBreakTime = false;
+        private FullScreenBlur _blurScreen;
 
         public MainWindow()
         {
             InitializeComponent();
-            _timeLeft = TimeSpan.FromMinutes(20); // Default 20-minute timer
-            _breakDuration = TimeSpan.FromSeconds(20); // Default 20 seconds break
-            UpdateTimerDisplay();
+            _timer = new DispatcherTimer();
+            _timer.Interval = TimeSpan.FromSeconds(1);
+            _timer.Tick += Timer_Tick;
+            _workDuration = TimeSpan.FromMinutes(1);  // Default: 1 minute
+            _breakDuration = TimeSpan.FromSeconds(15); // Default: 15 seconds
+            _blurScreen = new FullScreenBlur();
+            UpdateTimerDisplay(_workDuration);
         }
-
         private void SetTimer_Click(object sender, RoutedEventArgs e)
         {
             if (int.TryParse(WorkHoursInput.Text, out int hours) &&
                 int.TryParse(WorkMinutesInput.Text, out int minutes) &&
                 int.TryParse(WorkSecondsInput.Text, out int seconds) &&
-                (hours >= 0 || minutes > 0 || seconds > 0))
+                (hours > 0 || minutes > 0 || seconds > 0))
             {
-                _timeLeft = new TimeSpan(hours, minutes, seconds);
+                _workDuration = new TimeSpan(hours, minutes, seconds);
             }
             else
             {
-                MessageBox.Show("Please enter a valid work duration.");
+                System.Windows.MessageBox.Show("Please enter a valid work duration.");
                 return;
             }
 
@@ -42,84 +49,84 @@ namespace LookawayApp
             }
             else
             {
-                MessageBox.Show("Please enter a valid break duration.");
+                System.Windows.MessageBox.Show("Please enter a valid break duration.");
                 return;
             }
 
-            UpdateTimerDisplay();
-            MessageBox.Show("Timer settings updated!");
+            _currentTime = _workDuration;
+            UpdateTimerDisplay(_currentTime);
+
+            System.Windows.MessageBox.Show("Timer settings updated!");
         }
 
         private void StartButton_Click(object sender, RoutedEventArgs e)
         {
-            if (_timer == null)
+            if (_currentTime.TotalSeconds > 0)
             {
-                _timer = new Timer(1000); // 1-second interval
-                _timer.Elapsed += Timer_Elapsed;
                 _timer.Start();
+            }
+            else
+            {
+                System.Windows.MessageBox.Show("Please set a valid timer before starting.");
             }
         }
 
         private void StopButton_Click(object sender, RoutedEventArgs e)
         {
-            _timer?.Stop();
-            _timer = null;
-            _timeLeft = TimeSpan.FromMinutes(20); // Reset timer
-            UpdateTimerDisplay();
-            HideBlurOverlay();
+            _timer.Stop();
+            _isBreakTime = false;
+            _currentTime = _workDuration;
+            UpdateTimerDisplay(_currentTime);
+            _blurScreen.HideOverlay();
         }
 
-        private void Timer_Elapsed(object sender, ElapsedEventArgs e)
+        private void Timer_Tick(object sender, EventArgs e)
         {
-            Dispatcher.Invoke(() =>
+            if (_currentTime.TotalSeconds == 15 && !_isBreakTime)
             {
-                _timeLeft = _timeLeft.Subtract(TimeSpan.FromSeconds(1));
-                UpdateTimerDisplay();
+                ShowBreakNotification();
+            }
 
-                if (_timeLeft.TotalSeconds <= 0)
+            if (_currentTime.TotalSeconds > 0)
+            {
+                _currentTime = _currentTime.Subtract(TimeSpan.FromSeconds(1));
+                UpdateTimerDisplay(_currentTime);
+            }
+            else
+            {
+                _timer.Stop();
+                if (!_isBreakTime)
                 {
-                    _timer.Stop();
-                    _timer = null;
-                    ShowBlurOverlay();
-                    StartBreakTimer();
+                    _blurScreen.ShowOverlay();
+                    _currentTime = _breakDuration;
+                    _isBreakTime = true;
+                    _timer.Start();
                 }
-            });
+                else
+                {
+                    _blurScreen.HideOverlay();
+                    _currentTime = _workDuration;
+                    _isBreakTime = false;
+                    _timer.Start();
+                }
+            }
         }
 
-        private void UpdateTimerDisplay()
+        private void UpdateTimerDisplay(TimeSpan time)
         {
-            TimerDisplay.Text = _timeLeft.ToString(@"hh\:mm\:ss");
+            TimerDisplay.Text = time.ToString(@"hh\:mm\:ss");
         }
 
-        private void ShowBlurOverlay()
+        private void ShowBreakNotification()
         {
-            BlurOverlay.Visibility = Visibility.Visible;
-            BreakMessage.Visibility = Visibility.Visible;
-        }
-
-        private void HideBlurOverlay()
-        {
-            BlurOverlay.Visibility = Visibility.Collapsed;
-            BreakMessage.Visibility = Visibility.Collapsed;
-        }
-
-        private void StartBreakTimer()
-        {
-            _breakTimer = new Timer(_breakDuration.TotalMilliseconds);
-            _breakTimer.Elapsed += BreakTimer_Elapsed;
-            _breakTimer.Start();
-        }
-
-        private void BreakTimer_Elapsed(object sender, ElapsedEventArgs e)
-        {
-            Dispatcher.Invoke(() =>
+            NotifyIcon notifyIcon = new NotifyIcon
             {
-                _breakTimer.Stop();
-                _breakTimer = null;
-                HideBlurOverlay();
-                _timeLeft = TimeSpan.FromMinutes(20); // Reset timer
-                UpdateTimerDisplay();
-            });
+                BalloonTipTitle = "Upcoming Break",
+                BalloonTipText = "Your break starts in 15 seconds!",
+                Visible = true,
+                Icon = SystemIcons.Information
+            };
+            notifyIcon.ShowBalloonTip(3000);
         }
     }
 }
