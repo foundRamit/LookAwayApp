@@ -1,76 +1,102 @@
+#nullable enable
 using System;
-using System.Windows.Forms;
 using System.Drawing;
-using System.Drawing.Drawing2D;
+using System.Windows.Forms;
 
 namespace LookawayApp
 {
     public class FullScreenBlur : Form
     {
-        private readonly Timer _timer;
+        private readonly Timer _blurTimer;
+        private readonly Label _breakLabel;
+        private readonly Button _skipButton;
+        public event Action? BreakSkipped; // Event to notify main app
 
         public FullScreenBlur()
         {
+            // Form properties
             this.FormBorderStyle = FormBorderStyle.None;
             this.WindowState = FormWindowState.Maximized;
             this.TopMost = true;
             this.BackColor = Color.Black;
-            this.Opacity = 0.7;  // Semi-transparent background
+            this.Opacity = 0.7; // Semi-transparent background
             this.ShowInTaskbar = false;
             this.StartPosition = FormStartPosition.Manual;
-            this.Location = new Point(0, 0);  // Cover the entire screen
+            this.Location = new Point(0, 0); // Fill entire screen
 
-            // Enable double buffering to prevent flickering
-            this.SetStyle(ControlStyles.OptimizedDoubleBuffer | ControlStyles.AllPaintingInWmPaint | ControlStyles.UserPaint, true);
+            // Break label
+            _breakLabel = new Label
+            {
+                Text = "TIME TO TAKE A BREAK",
+                ForeColor = Color.White,
+                Font = new Font("Arial", 24, FontStyle.Bold),
+                AutoSize = true,
+                BackColor = Color.Transparent
+            };
 
-            _timer = new Timer();
-            _timer.Interval = 10;
-            _timer.Tick += Timer_Tick;
-            _timer.Start();
+            // Skip button
+            _skipButton = new Button
+            {
+                Text = "Skip Break",
+                Font = new Font("Arial", 12, FontStyle.Bold),
+                ForeColor = Color.Black,
+                BackColor = Color.White,
+                Size = new Size(120, 40)
+            };
+
+            _skipButton.Click += SkipButton_Click;
+
+            // Add controls to the form
+            this.Controls.Add(_breakLabel);
+            this.Controls.Add(_skipButton);
+
+            // Timer to update blur effect
+            _blurTimer = new Timer { Interval = 10 };
+            _blurTimer.Tick += BlurTimer_Tick;
+            _blurTimer.Start();
         }
 
-        // Show the blur effect
+        // Position label and button in the center
+        protected override void OnResize(EventArgs e)
+        {
+            base.OnResize(e);
+            _breakLabel.Location = new Point((this.Width - _breakLabel.Width) / 2, (this.Height - _breakLabel.Height) / 2 - 50);
+            _skipButton.Location = new Point((this.Width - _skipButton.Width) / 2, (this.Height - _skipButton.Height) / 2 + 50);
+        }
+
+        // Show the overlay
         public void ShowOverlay()
         {
             this.Show();
         }
 
-        // Hide the blur effect
+        // Hide the overlay
         public void HideOverlay()
         {
             this.Hide();
         }
 
-        // Custom rendering to create a blur effect and centered text
+        // Skip button action
+        private void SkipButton_Click(object? sender, EventArgs e)
+        {
+            HideOverlay();
+            BreakSkipped?.Invoke(); // Notify main app to restart work timer
+        }
+
+        // Timer tick for updating the blur effect
+        private void BlurTimer_Tick(object? sender, EventArgs e)
+        {
+            Invalidate();
+        }
+
+        // Paint blur effect on form
         protected override void OnPaint(PaintEventArgs e)
         {
             base.OnPaint(e);
-
-            // Create a semi-transparent blurred overlay
-            using (Brush blurBrush = new SolidBrush(Color.FromArgb(180, 0, 0, 0)))  // Darker semi-transparent overlay
+            using (Brush brush = new SolidBrush(Color.FromArgb(120, 0, 0, 0))) // Semi-transparent black
             {
-                e.Graphics.FillRectangle(blurBrush, this.ClientRectangle);
+                e.Graphics.FillRectangle(brush, this.ClientRectangle);
             }
-
-            // Draw centered text
-            string breakText = "TIME TO TAKE A BREAK";
-            Font textFont = new Font("Arial", 36, FontStyle.Bold);
-            SizeF textSize = e.Graphics.MeasureString(breakText, textFont);
-
-            // Center the text
-            float textX = (this.ClientSize.Width - textSize.Width) / 2;
-            float textY = (this.ClientSize.Height - textSize.Height) / 2;
-
-            using (Brush textBrush = new SolidBrush(Color.White))
-            {
-                e.Graphics.DrawString(breakText, textFont, textBrush, textX, textY);
-            }
-        }
-
-        // Periodically update the blur effect
-        private void Timer_Tick(object sender, EventArgs e)
-        {
-            Invalidate();
         }
     }
 }

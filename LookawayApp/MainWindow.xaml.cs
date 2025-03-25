@@ -137,6 +137,7 @@ namespace LookawayApp
             if (_blurScreen == null)
             {
                 _blurScreen = new FullScreenBlur();
+                _blurScreen.BreakSkipped += RestartWorkTimer; // Attach event listener
             }
 
             _blurScreen.Show();
@@ -149,8 +150,18 @@ namespace LookawayApp
             if (_blurScreen != null)
             {
                 _blurScreen.HideOverlay();
+                _blurScreen.BreakSkipped -= RestartWorkTimer; // Detach event listener
                 _blurScreen = null;  // Make sure to nullify after hiding
             }
+        }
+
+        private void RestartWorkTimer()
+        {
+            HideBlurOverlay();
+            _currentTime = _workDuration;
+            _isBreakTime = false;
+            UpdateTimerDisplay(_currentTime);
+            _timer.Start();
         }
     }
 }
