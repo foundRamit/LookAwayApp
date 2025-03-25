@@ -22,7 +22,6 @@ namespace LookawayApp
         private bool _isPaused = false;
         private FloatingCountdown? _floatingCountdown;
         private FullScreenBlur? _blurScreen;
-
         private DateTime? _lastInactiveTime;
         private bool _isWaitingForResume = false;
 
@@ -42,12 +41,10 @@ namespace LookawayApp
             _currentTime = _workDuration;
             UpdateTimerDisplay(_workDuration);
 
-            // Monitor User Activity for Smart Pause & Resume
             _usageMonitorTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(1) };
             _usageMonitorTimer.Tick += TrackUsage;
             _usageMonitorTimer.Start();
 
-            // Detect screen lock/unlock
             SystemEvents.SessionSwitch += OnSessionSwitch;
             System.Windows.Input.InputManager.Current.PreProcessInput += OnUserActivity;
         }
@@ -55,7 +52,7 @@ namespace LookawayApp
         protected override void OnClosed(EventArgs e)
         {
             base.OnClosed(e);
-            System.Windows.Application.Current.Shutdown(); // Ensures process termination
+            System.Windows.Application.Current.Shutdown();
         }
 
         private void StartButton_Click(object sender, RoutedEventArgs e)
@@ -226,7 +223,6 @@ namespace LookawayApp
             }
         }
 
-        // Smart Pause & Resume
         private void TrackUsage(object? sender, EventArgs e)
         {
             if (!_isPaused)
