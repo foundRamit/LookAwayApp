@@ -10,20 +10,27 @@ namespace LookawayApp
     public partial class MainWindow : Window
     {
         private DispatcherTimer _timer;
+        private DispatcherTimer _reminderTimer;
         private TimeSpan _currentTime;
         private TimeSpan _workDuration;
         private TimeSpan _breakDuration;
+        private TimeSpan _reminderInterval;
         private bool _isBreakTime = false;
         private FullScreenBlur? _blurScreen;
 
         public MainWindow()
         {
             InitializeComponent();
-            _timer = new DispatcherTimer();
-            _timer.Interval = TimeSpan.FromSeconds(1);
+
+            _timer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(1) };
             _timer.Tick += Timer_Tick;
-            _workDuration = TimeSpan.FromMinutes(1);  // Default work duration
-            _breakDuration = TimeSpan.FromSeconds(15);  // Default break duration
+
+            _reminderInterval = TimeSpan.FromSeconds(20);  // Reminder every 20 seconds for testing
+            _reminderTimer = new DispatcherTimer { Interval = _reminderInterval };
+            _reminderTimer.Tick += Reminder_Tick;
+
+            _workDuration = TimeSpan.FromMinutes(1);  // Default 1-minute work duration
+            _breakDuration = TimeSpan.FromSeconds(15);  // Default 15-second break
             _currentTime = _workDuration;
             UpdateTimerDisplay(_workDuration);
         }
@@ -65,6 +72,7 @@ namespace LookawayApp
             if (_currentTime.TotalSeconds > 0)
             {
                 _timer.Start();
+                _reminderTimer.Start();  // Start reminder notifications
             }
             else
             {
@@ -75,6 +83,7 @@ namespace LookawayApp
         private void StopButton_Click(object sender, RoutedEventArgs e)
         {
             _timer.Stop();
+            _reminderTimer.Stop();  // Stop reminder notifications
             _isBreakTime = false;
             _currentTime = _workDuration;
             UpdateTimerDisplay(_currentTime);
@@ -98,6 +107,8 @@ namespace LookawayApp
             else
             {
                 _timer.Stop();
+                _reminderTimer.Stop(); // Stop reminders during the break
+
                 if (!_isBreakTime)
                 {
                     ShowBlurOverlay();  // Show blur screen when break starts
@@ -111,8 +122,21 @@ namespace LookawayApp
                     _currentTime = _workDuration;
                     _isBreakTime = false;
                     _timer.Start();
+                    _reminderTimer.Start(); // Restart reminders for work time
                 }
             }
+        }
+
+        private void Reminder_Tick(object? sender, EventArgs e)
+        {
+            NotifyIcon notifyIcon = new NotifyIcon
+            {
+                BalloonTipTitle = "Mindful Reminder",
+                BalloonTipText = "Take a deep breath, blink your eyes, or drink some water!",
+                Visible = true,
+                Icon = SystemIcons.Information
+            };
+            notifyIcon.ShowBalloonTip(5000);
         }
 
         private void UpdateTimerDisplay(TimeSpan time)
@@ -137,7 +161,6 @@ namespace LookawayApp
             if (_blurScreen == null)
             {
                 _blurScreen = new FullScreenBlur();
-                _blurScreen.BreakSkipped += RestartWorkTimer; // Attach event listener
             }
 
             _blurScreen.Show();
@@ -150,18 +173,8 @@ namespace LookawayApp
             if (_blurScreen != null)
             {
                 _blurScreen.HideOverlay();
-                _blurScreen.BreakSkipped -= RestartWorkTimer; // Detach event listener
                 _blurScreen = null;  // Make sure to nullify after hiding
             }
-        }
-
-        private void RestartWorkTimer()
-        {
-            HideBlurOverlay();
-            _currentTime = _workDuration;
-            _isBreakTime = false;
-            UpdateTimerDisplay(_currentTime);
-            _timer.Start();
         }
     }
 }
