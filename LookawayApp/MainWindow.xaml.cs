@@ -1,5 +1,4 @@
-﻿#nullable enable
-using System;
+﻿using System;
 using System.Windows;
 using System.Windows.Threading;
 using System.Windows.Forms;
@@ -16,6 +15,7 @@ namespace LookawayApp
         private TimeSpan _breakDuration;
         private TimeSpan _reminderInterval;
         private bool _isBreakTime = false;
+        private FloatingCountdown? _floatingCountdown;
         private FullScreenBlur? _blurScreen;
 
         public MainWindow()
@@ -25,46 +25,14 @@ namespace LookawayApp
             _timer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(1) };
             _timer.Tick += Timer_Tick;
 
-            _reminderInterval = TimeSpan.FromSeconds(20);  // Reminder every 20 seconds for testing
+            _reminderInterval = TimeSpan.FromMinutes(1);
             _reminderTimer = new DispatcherTimer { Interval = _reminderInterval };
             _reminderTimer.Tick += Reminder_Tick;
 
-            _workDuration = TimeSpan.FromMinutes(1);  // Default 1-minute work duration
-            _breakDuration = TimeSpan.FromSeconds(15);  // Default 15-second break
+            _workDuration = TimeSpan.FromMinutes(1);
+            _breakDuration = TimeSpan.FromSeconds(15);
             _currentTime = _workDuration;
             UpdateTimerDisplay(_workDuration);
-        }
-
-        private void SetTimer_Click(object sender, RoutedEventArgs e)
-        {
-            if (int.TryParse(WorkHoursInput.Text, out int hours) &&
-                int.TryParse(WorkMinutesInput.Text, out int minutes) &&
-                int.TryParse(WorkSecondsInput.Text, out int seconds) &&
-                (hours >= 0 || minutes >= 0 || seconds > 0))
-            {
-                _workDuration = new TimeSpan(hours, minutes, seconds);
-            }
-            else
-            {
-                System.Windows.MessageBox.Show("Please enter a valid work duration.");
-                return;
-            }
-
-            if (int.TryParse(BreakMinutesInput.Text, out int breakMinutes) &&
-                int.TryParse(BreakSecondsInput.Text, out int breakSeconds) &&
-                (breakMinutes >= 0 || breakSeconds > 0))
-            {
-                _breakDuration = new TimeSpan(0, breakMinutes, breakSeconds);
-            }
-            else
-            {
-                System.Windows.MessageBox.Show("Please enter a valid break duration.");
-                return;
-            }
-
-            _currentTime = _workDuration;
-            UpdateTimerDisplay(_currentTime);
-            System.Windows.MessageBox.Show("Timer settings updated!");
         }
 
         private void StartButton_Click(object sender, RoutedEventArgs e)
@@ -72,7 +40,8 @@ namespace LookawayApp
             if (_currentTime.TotalSeconds > 0)
             {
                 _timer.Start();
-                _reminderTimer.Start();  // Start reminder notifications
+                _reminderTimer.Start();
+                ShowFloatingCountdown();
             }
             else
             {
@@ -83,60 +52,53 @@ namespace LookawayApp
         private void StopButton_Click(object sender, RoutedEventArgs e)
         {
             _timer.Stop();
-            _reminderTimer.Stop();  // Stop reminder notifications
+            _reminderTimer.Stop();
             _isBreakTime = false;
             _currentTime = _workDuration;
             UpdateTimerDisplay(_currentTime);
             HideBlurOverlay();
+            HideFloatingCountdown();
         }
 
         private void Timer_Tick(object? sender, EventArgs e)
         {
-            // Show notification before break
             if (_currentTime.TotalSeconds == 15 && !_isBreakTime)
             {
                 ShowBreakNotification();
             }
 
-            // Countdown logic
             if (_currentTime.TotalSeconds > 0)
             {
                 _currentTime = _currentTime.Subtract(TimeSpan.FromSeconds(1));
                 UpdateTimerDisplay(_currentTime);
+                UpdateFloatingCountdown(_currentTime);
             }
             else
             {
                 _timer.Stop();
-                _reminderTimer.Stop(); // Stop reminders during the break
+                _reminderTimer.Stop();
 
                 if (!_isBreakTime)
                 {
-                    ShowBlurOverlay();  // Show blur screen when break starts
+                    ShowBlurOverlay();
                     _currentTime = _breakDuration;
                     _isBreakTime = true;
                     _timer.Start();
                 }
                 else
                 {
-                    HideBlurOverlay();  // Hide blur screen when break ends
+                    HideBlurOverlay();
                     _currentTime = _workDuration;
                     _isBreakTime = false;
                     _timer.Start();
-                    _reminderTimer.Start(); // Restart reminders for work time
+                    _reminderTimer.Start();
                 }
             }
         }
 
         private void Reminder_Tick(object? sender, EventArgs e)
         {
-            NotifyIcon notifyIcon = new NotifyIcon
-            {
-                BalloonTipTitle = "Mindful Reminder",
-                BalloonTipText = "Take a deep breath, blink your eyes, or drink some water!",
-                Visible = true,
-                Icon = SystemIcons.Information
-            };
-            notifyIcon.ShowBalloonTip(5000);
+            ShowReminderNotification("Blink Reminder", "Remember to blink and take a deep breath!");
         }
 
         private void UpdateTimerDisplay(TimeSpan time)
@@ -156,24 +118,85 @@ namespace LookawayApp
             notifyIcon.ShowBalloonTip(3000);
         }
 
+        private void ShowReminderNotification(string title, string message)
+        {
+            NotifyIcon notifyIcon = new NotifyIcon
+            {
+                BalloonTipTitle = title,
+                BalloonTipText = message,
+                Visible = true,
+                Icon = SystemIcons.Information
+            };
+            notifyIcon.ShowBalloonTip(5000);
+        }
+
+        private void ShowFloatingCountdown()
+        {
+            if (_floatingCountdown == null)
+            {
+                _floatingCountdown = new FloatingCountdown();
+                _floatingCountdown.Show();
+            }
+        }
+
+        private void UpdateFloatingCountdown(TimeSpan timeLeft)
+        {
+            _floatingCountdown?.UpdateCountdown((int)timeLeft.TotalSeconds);
+        }
+
+        private void HideFloatingCountdown()
+        {
+            _floatingCountdown?.Hide(); // Use Hide() instead of Close() to prevent reinitialization issues
+        }
+
         private void ShowBlurOverlay()
         {
             if (_blurScreen == null)
             {
                 _blurScreen = new FullScreenBlur();
+                _blurScreen.Show();
             }
-
-            _blurScreen.Show();
-            _blurScreen.TopMost = true;  // Ensure it's on top of all other apps
-            _blurScreen.ShowOverlay();
         }
 
         private void HideBlurOverlay()
         {
-            if (_blurScreen != null)
+            _blurScreen?.Close();
+            _blurScreen = null;
+        }
+
+        private void SetTimer_Click(object sender, RoutedEventArgs e)
+        {
+            if (int.TryParse(WorkHours.Text, out int hours) &&
+                int.TryParse(WorkMinutes.Text, out int minutes) &&
+                int.TryParse(WorkSeconds.Text, out int seconds) &&
+                int.TryParse(BreakMinutes.Text, out int breakMinutes) &&
+                int.TryParse(BreakSeconds.Text, out int breakSeconds))
             {
-                _blurScreen.HideOverlay();
-                _blurScreen = null;  // Make sure to nullify after hiding
+                _workDuration = new TimeSpan(hours, minutes, seconds);
+                _breakDuration = new TimeSpan(0, breakMinutes, breakSeconds);
+                _currentTime = _workDuration;
+                UpdateTimerDisplay(_currentTime);
+
+                System.Windows.MessageBox.Show("Timer updated!");
+            }
+            else
+            {
+                System.Windows.MessageBox.Show("Invalid input. Please enter valid numbers.");
+            }
+        }
+
+        private void SetReminder_Click(object sender, RoutedEventArgs e)
+        {
+            if (int.TryParse(ReminderIntervalInput.Text, out int interval) && interval > 0)
+            {
+                _reminderInterval = TimeSpan.FromMinutes(interval);
+                _reminderTimer.Interval = _reminderInterval;
+                _reminderTimer.Start();
+                System.Windows.MessageBox.Show("Reminder interval updated!");
+            }
+            else
+            {
+                System.Windows.MessageBox.Show("Please enter a valid interval.");
             }
         }
     }
