@@ -1,8 +1,10 @@
 ﻿using System;
+using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Threading;
 using System.Windows.Forms;
 using System.Drawing;
+using Microsoft.Win32;
 
 namespace LookawayApp
 {
@@ -10,13 +12,19 @@ namespace LookawayApp
     {
         private DispatcherTimer _timer;
         private DispatcherTimer _reminderTimer;
+        private DispatcherTimer _usageMonitorTimer;
         private TimeSpan _currentTime;
         private TimeSpan _workDuration;
         private TimeSpan _breakDuration;
         private TimeSpan _reminderInterval;
+        private TimeSpan _activeTime = TimeSpan.Zero;
         private bool _isBreakTime = false;
+        private bool _isPaused = false;
         private FloatingCountdown? _floatingCountdown;
         private FullScreenBlur? _blurScreen;
+
+        private DateTime? _lastInactiveTime;
+        private bool _isWaitingForResume = false;
 
         public MainWindow()
         {
@@ -33,6 +41,15 @@ namespace LookawayApp
             _breakDuration = TimeSpan.FromSeconds(15);
             _currentTime = _workDuration;
             UpdateTimerDisplay(_workDuration);
+
+            // Monitor User Activity for Smart Pause & Resume
+            _usageMonitorTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(1) };
+            _usageMonitorTimer.Tick += TrackUsage;
+            _usageMonitorTimer.Start();
+
+            // Detect screen lock/unlock
+            SystemEvents.SessionSwitch += OnSessionSwitch;
+            System.Windows.Input.InputManager.Current.PreProcessInput += OnUserActivity;
         }
 
         protected override void OnClosed(EventArgs e)
@@ -152,7 +169,7 @@ namespace LookawayApp
 
         private void HideFloatingCountdown()
         {
-            _floatingCountdown?.Hide(); // Use Hide() instead of Close() to prevent reinitialization issues
+            _floatingCountdown?.Hide();
         }
 
         private void ShowBlurOverlay()
@@ -195,7 +212,7 @@ namespace LookawayApp
         {
             if (int.TryParse(ReminderMinutes.Text, out int minutes) &&
                 int.TryParse(ReminderSeconds.Text, out int seconds) &&
-                (minutes > 0 || seconds > 0))  // Ensure non-zero input
+                (minutes > 0 || seconds > 0))
             {
                 _reminderInterval = new TimeSpan(0, minutes, seconds);
                 _reminderTimer.Interval = _reminderInterval;
@@ -207,6 +224,70 @@ namespace LookawayApp
             {
                 System.Windows.MessageBox.Show("Invalid input! Please enter valid minutes and seconds.");
             }
+        }
+
+        // Smart Pause & Resume
+        private void TrackUsage(object? sender, EventArgs e)
+        {
+            if (!_isPaused)
+            {
+                _activeTime = _activeTime.Add(TimeSpan.FromSeconds(1));
+
+                if (_activeTime.TotalMinutes >= 30)
+                {
+                    SuggestExtraBreak();
+                    _activeTime = TimeSpan.Zero;
+                }
+            }
+        }
+
+        private void OnUserActivity(object sender, System.Windows.Input.PreProcessInputEventArgs e)
+        {
+            _activeTime = TimeSpan.Zero;
+            if (_isWaitingForResume)
+            {
+                ResumeTimer();
+                _isWaitingForResume = false;
+            }
+        }
+
+        private void OnSessionSwitch(object sender, SessionSwitchEventArgs e)
+        {
+            if (e.Reason == SessionSwitchReason.SessionLock)
+            {
+                _lastInactiveTime = DateTime.Now;
+                PauseTimer();
+            }
+            else if (e.Reason == SessionSwitchReason.SessionUnlock)
+            {
+                if (_lastInactiveTime.HasValue && (DateTime.Now - _lastInactiveTime.Value).TotalSeconds > 10)
+                {
+                    _isWaitingForResume = true;
+                }
+                else
+                {
+                    ResumeTimer();
+                }
+            }
+        }
+
+        private void PauseTimer()
+        {
+            _timer.Stop();
+            _reminderTimer.Stop();
+            _isPaused = true;
+        }
+
+        private void ResumeTimer()
+        {
+            _timer.Start();
+            _reminderTimer.Start();
+            _isPaused = false;
+        }
+
+        private void SuggestExtraBreak()
+        {
+            ShowReminderNotification("Extra Break Needed", "You've been working for 30 minutes. Take a short break!");
         }
     }
 }
