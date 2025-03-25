@@ -48,9 +48,11 @@
                     Width="120" Height="40" Margin="5" HorizontalAlignment="Center"/>
 
             <!-- Mindful Reminder Input -->
-            <StackPanel Grid.Row="3" Orientation="Vertical" HorizontalAlignment="Center" Margin="5">
-                <TextBlock Text="Mindful Reminder Interval (minutes):" FontSize="14" HorizontalAlignment="Center"/>
-                <TextBox Name="ReminderIntervalInput" Width="60" FontSize="16" Text="1"/>
+            <StackPanel Grid.Row="3" Orientation="Horizontal" HorizontalAlignment="Center" Margin="5">
+                    <TextBlock Text="Mindful Reminder Interval (mm:ss)" FontSize="14" HorizontalAlignment="Center"/>
+                    <TextBox Name="ReminderMinutes" Width="40" FontSize="16" Text="00"/>
+                    <TextBlock Text=" : " FontSize="16"/>
+                    <TextBox Name="ReminderSeconds" Width="40" FontSize="16" Text="00"/>
             </StackPanel>
 
             <!-- Set Mindful Reminder Button -->
