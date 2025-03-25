@@ -1,4 +1,5 @@
-﻿using System;
+﻿#nullable enable
+using System;
 using System.Windows;
 using System.Windows.Threading;
 using System.Windows.Forms;
@@ -13,7 +14,7 @@ namespace LookawayApp
         private TimeSpan _workDuration;
         private TimeSpan _breakDuration;
         private bool _isBreakTime = false;
-        private FullScreenBlur _blurScreen;
+        private FullScreenBlur? _blurScreen;
 
         public MainWindow()
         {
@@ -21,17 +22,18 @@ namespace LookawayApp
             _timer = new DispatcherTimer();
             _timer.Interval = TimeSpan.FromSeconds(1);
             _timer.Tick += Timer_Tick;
-            _workDuration = TimeSpan.FromMinutes(1);  // Default: 1 minute
-            _breakDuration = TimeSpan.FromSeconds(15); // Default: 15 seconds
-            _blurScreen = new FullScreenBlur();
+            _workDuration = TimeSpan.FromMinutes(1);  // Default work duration
+            _breakDuration = TimeSpan.FromSeconds(15);  // Default break duration
+            _currentTime = _workDuration;
             UpdateTimerDisplay(_workDuration);
         }
+
         private void SetTimer_Click(object sender, RoutedEventArgs e)
         {
             if (int.TryParse(WorkHoursInput.Text, out int hours) &&
                 int.TryParse(WorkMinutesInput.Text, out int minutes) &&
                 int.TryParse(WorkSecondsInput.Text, out int seconds) &&
-                (hours > 0 || minutes > 0 || seconds > 0))
+                (hours >= 0 || minutes >= 0 || seconds > 0))
             {
                 _workDuration = new TimeSpan(hours, minutes, seconds);
             }
@@ -55,7 +57,6 @@ namespace LookawayApp
 
             _currentTime = _workDuration;
             UpdateTimerDisplay(_currentTime);
-
             System.Windows.MessageBox.Show("Timer settings updated!");
         }
 
@@ -77,16 +78,18 @@ namespace LookawayApp
             _isBreakTime = false;
             _currentTime = _workDuration;
             UpdateTimerDisplay(_currentTime);
-            _blurScreen.HideOverlay();
+            HideBlurOverlay();
         }
 
-        private void Timer_Tick(object sender, EventArgs e)
+        private void Timer_Tick(object? sender, EventArgs e)
         {
+            // Show notification before break
             if (_currentTime.TotalSeconds == 15 && !_isBreakTime)
             {
                 ShowBreakNotification();
             }
 
+            // Countdown logic
             if (_currentTime.TotalSeconds > 0)
             {
                 _currentTime = _currentTime.Subtract(TimeSpan.FromSeconds(1));
@@ -97,14 +100,14 @@ namespace LookawayApp
                 _timer.Stop();
                 if (!_isBreakTime)
                 {
-                    _blurScreen.ShowOverlay();
+                    ShowBlurOverlay();  // Show blur screen when break starts
                     _currentTime = _breakDuration;
                     _isBreakTime = true;
                     _timer.Start();
                 }
                 else
                 {
-                    _blurScreen.HideOverlay();
+                    HideBlurOverlay();  // Hide blur screen when break ends
                     _currentTime = _workDuration;
                     _isBreakTime = false;
                     _timer.Start();
@@ -127,6 +130,27 @@ namespace LookawayApp
                 Icon = SystemIcons.Information
             };
             notifyIcon.ShowBalloonTip(3000);
+        }
+
+        private void ShowBlurOverlay()
+        {
+            if (_blurScreen == null)
+            {
+                _blurScreen = new FullScreenBlur();
+            }
+
+            _blurScreen.Show();
+            _blurScreen.TopMost = true;  // Ensure it's on top of all other apps
+            _blurScreen.ShowOverlay();
+        }
+
+        private void HideBlurOverlay()
+        {
+            if (_blurScreen != null)
+            {
+                _blurScreen.HideOverlay();
+                _blurScreen = null;  // Make sure to nullify after hiding
+            }
         }
     }
 }

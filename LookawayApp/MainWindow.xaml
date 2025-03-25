@@ -47,11 +47,6 @@
             <Button Name="StopButton" Content="Stop" Width="120" Height="40" Margin="5" Click="StopButton_Click"/>
         </StackPanel>
 
-        <!-- Break Overlay (Initially Hidden) -->
-        <Border x:Name="BreakOverlay" Background="#80000000" Visibility="Collapsed"
-                Grid.RowSpan="4" CornerRadius="10">
-            <TextBlock Text="Take a Break" FontSize="40" FontWeight="Bold" Foreground="White"
-                       HorizontalAlignment="Center" VerticalAlignment="Center"/>
-        </Border>
     </Grid>
 </Window>
+
