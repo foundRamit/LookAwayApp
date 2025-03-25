@@ -35,6 +35,12 @@ namespace LookawayApp
             UpdateTimerDisplay(_workDuration);
         }
 
+        protected override void OnClosed(EventArgs e)
+        {
+            base.OnClosed(e);
+            System.Windows.Application.Current.Shutdown(); // Ensures process termination
+        }
+
         private void StartButton_Click(object sender, RoutedEventArgs e)
         {
             if (_currentTime.TotalSeconds > 0)
@@ -184,24 +190,23 @@ namespace LookawayApp
                 System.Windows.MessageBox.Show("Invalid input. Please enter valid numbers.");
             }
         }
-        
+
         private void SetReminder_Click(object sender, RoutedEventArgs e)
-{
-    if (int.TryParse(ReminderMinutes.Text, out int minutes) &&
-        int.TryParse(ReminderSeconds.Text, out int seconds) &&
-        (minutes > 0 || seconds > 0))  // Ensure non-zero input
-    {
-        _reminderInterval = new TimeSpan(0, minutes, seconds);
-        _reminderTimer.Interval = _reminderInterval;
-        _reminderTimer.Start();
+        {
+            if (int.TryParse(ReminderMinutes.Text, out int minutes) &&
+                int.TryParse(ReminderSeconds.Text, out int seconds) &&
+                (minutes > 0 || seconds > 0))  // Ensure non-zero input
+            {
+                _reminderInterval = new TimeSpan(0, minutes, seconds);
+                _reminderTimer.Interval = _reminderInterval;
+                _reminderTimer.Start();
 
-        System.Windows.MessageBox.Show($"Reminder set to {minutes} min {seconds} sec!");
-    }
-    else
-    {
-        System.Windows.MessageBox.Show("Invalid input! Please enter valid minutes and seconds.");
-    }
-}
-
+                System.Windows.MessageBox.Show($"Reminder set to {minutes} min {seconds} sec!");
+            }
+            else
+            {
+                System.Windows.MessageBox.Show("Invalid input! Please enter valid minutes and seconds.");
+            }
+        }
     }
 }
