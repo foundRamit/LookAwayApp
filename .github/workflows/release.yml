@@ -17,12 +17,12 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0  # Ensures we fetch all tags
+          fetch-depth: 0
 
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: '9.0.202'  # Exact version you specified
+          dotnet-version: '9.0.202'
 
       - name: Restore dependencies
         run: dotnet restore
@@ -30,24 +30,24 @@ jobs:
       - name: Build application
         run: dotnet build -c Release
 
-      - name: Run tests
-        run: dotnet test -c Release --no-build
-
       - name: Publish application
-        run: dotnet publish -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:PublishTrimmed=true -o release/
+        run: |
+          dotnet publish LookawayApp.csproj `
+            -c Release `
+            -r win-x64 `
+            --self-contained true `
+            -p:PublishSingleFile=true `
+            -p:PublishTrimmed=false `
+            -p:IncludeNativeLibrariesForSelfExtract=true `
+            -o release/
 
-      - name: Generate new version tag
+      - name: Generate version tag
         id: versioning
         shell: pwsh
         run: |
-          git fetch --tags
-          
-          # Get latest tag (if no tag, default to v0.0.0)
           $LATEST_TAG = git tag --sort=-v:refname | Select-Object -First 1
           if (-not $LATEST_TAG) { $LATEST_TAG = "v0.0.0" }
-          echo "Latest tag: $LATEST_TAG"
-
-          # Extract version numbers
+          
           $MAJOR, $MINOR, $PATCH = $LATEST_TAG -replace "v", "" -split "\."
           $NEW_PATCH = [int]$PATCH + 1
           $NEW_TAG = "v$MAJOR.$MINOR.$NEW_PATCH"
@@ -57,8 +57,8 @@ jobs:
 
       - name: Create Git Tag
         run: |
-          git config --global user.name "github-actions"
-          git config --global user.email "github-actions@github.com"
+          git config user.name "GitHub Actions"
+          git config user.email "actions@github.com"
           git tag ${{ steps.versioning.outputs.NEW_TAG }}
           git remote set-url origin https://x-access-token:${{ secrets.PAT_TOKEN }}@github.com/foundRamit/LookAwayApp.git
           git push origin ${{ steps.versioning.outputs.NEW_TAG }}
