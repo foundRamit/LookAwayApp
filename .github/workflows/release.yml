@@ -11,10 +11,10 @@ jobs:
 
     steps:
       - name: Checkout Code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Setup .NET
-        uses: actions/setup-dotnet@v3
+        uses: actions/setup-dotnet@v4
         with:
           dotnet-version: 9.0.x  # Change to your app's .NET version
 
@@ -27,32 +27,66 @@ jobs:
       - name: Publish the Application
         run: dotnet publish -c Release -o publish
 
-      - name: Create Installer
+      - name: Create Installer with Inno Setup
         run: |
-          echo "Creating installer..."
-          # Replace this with your actual installer command
-          # Example for Inno Setup:
-          # iscc path/to/your/installer_script.iss
-
-      - name: Auto Generate Tag
-        id: tag
-        shell: pwsh
-        env:
-          GH_PAT: ${{ secrets.GH_PAT }}  # Use Personal Access Token
-        run: |
-          $timestamp = Get-Date -UFormat "%Y%m%d%H%M%S"  # Get a unique timestamp
-          $NEW_TAG = "v1.0.$timestamp"
+          # Download and install Inno Setup
+          choco install innosetup -y
           
-          # Configure Git
-          git config --global user.name "github-actions[bot]"
-          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          # Create an Inno Setup script
+          echo "[Setup]
+          AppName=Lookaway App
+          AppVersion={#MyAppVersion}
+          DefaultDirName={pf}\LookawayApp
+          OutputBaseFilename=LookawayAppInstaller
+          OutputDir=installer
 
-          # Authenticate using PAT
-          git remote set-url origin https://x-access-token:${{ secrets.GH_PAT }}@github.com/${{ github.repository }}.git
+          [Files]
+          Source: 'publish\*'; DestDir: '{app}'; Flags: recursesubdirs
 
-          # Create and push the tag
-          git tag -a $NEW_TAG -m "Release $NEW_TAG"
-          git push origin $NEW_TAG
+          [Tasks]
+          Name: 'desktopicon'; Description: '{cm:CreateDesktopIcon}'; GroupDescription: '{cm:AdditionalIcons}'
 
-          # Save the tag for later use
-          echo "NEW_TAG=$NEW_TAG" | Out-File -FilePath $env:GITHUB_ENV -Append
+          [Icons]
+          Name: '{group}\Lookaway App'; Filename: '{app}\LookawayApp.exe'
+          Name: '{group}\{cm:UninstallProgram,Lookaway App}'; Filename: '{uninstallexe}'
+          Name: '{commondesktop}\Lookaway App'; Filename: '{app}\LookawayApp.exe'; Tasks: desktopicon
+          " > installer.iss
+
+          # Set version in the script
+          $timestamp = Get-Date -UFormat "%Y%m%d%H%M%S"
+          $version = "1.0.$timestamp"
+          (Get-Content installer.iss) | 
+          ForEach-Object { $_ -replace '{#MyAppVersion}', $version } | 
+          Set-Content installer.iss
+
+          # Compile the installer
+          iscc installer.iss
+
+      - name: Create GitHub Release
+        env:
+          GH_PAT: ${{ secrets.GH_PAT }}
+        run: |
+          # Prepare release tag
+          $timestamp = Get-Date -UFormat "%Y%m%d%H%M%S"
+          $releaseTag = "v1.0.$timestamp"
+          
+          # Create release using the GH_PAT secret
+          gh auth login --with-token <<< "$env:GH_PAT"
+          gh release create $releaseTag `
+            installer\LookawayAppInstaller.exe `
+            -t "Lookaway App Release $releaseTag" `
+            -n "Automated release of Lookaway App
+            
+            ## Changelog
+            - Automated build from main branch
+            - Version generated on $(Get-Date)
+            
+            ### Installation
+            Download the installer and run it to install Lookaway App."
+
+      - name: Upload Installer Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: lookaway-app-installer
+          path: installer\LookawayAppInstaller.exe
+          retention-days: 5
