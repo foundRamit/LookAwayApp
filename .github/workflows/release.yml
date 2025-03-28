@@ -2,23 +2,46 @@ name: Build and Release Installer
 
 on:
   push:
-    tags:
-      - "v*.*.*"  # Triggers only when a version tag like v1.0.0 is pushed
-
+    branches:
+      - main  # Runs when you push to the main branch
 
 jobs:
-  release:
-    runs-on: windows-latest
+  build:
+    runs-on: windows-latest  # Use Windows for building the installer
 
     steps:
-      - name: Checkout Repository
+      - name: Checkout Code
         uses: actions/checkout@v3
 
-      - name: Upload Installer to GitHub Release
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v3
+        with:
+          dotnet-version: 6.0.x  # Change to your app's .NET version
+
+      - name: Restore Dependencies
+        run: dotnet restore
+
+      - name: Build the Application
+        run: dotnet build --configuration Release --no-restore
+
+      - name: Publish the Application
+        run: dotnet publish -c Release -o publish
+
+      - name: Create Installer
+        run: |
+          # Add your installer creation command here
+          # Example: Inno Setup, NSIS, or other tools
+          echo "Creating installer..."  # Replace with actual installer command
+
+      - name: Upload Installer Artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: LookawayApp_Installer
+          path: publish/LookawayApp_Installer.exe  # Adjust path based on your setup
+
+      - name: Create GitHub Release
         uses: softprops/action-gh-release@v1
         with:
-          files: LookawayApp_Installer.exe
           token: ${{ secrets.GITHUB_TOKEN }}
-          tag_name: ${{ github.ref }}
-          draft: false
-          prerelease: false
+          tag_name: v1.0.${{ github.run_number }}  # Auto-increments version
+          files: publish/LookawayApp_Installer.exe
