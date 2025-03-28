@@ -43,12 +43,16 @@ jobs:
           echo "NEW_TAG=$NEW_TAG" | Out-File -FilePath $env:GITHUB_ENV -Append
           echo "Generated new tag: $NEW_TAG"
 
-      - name: Create Git Tag
+      - name: Check GitHub Token Permissions
+        run: |
+          curl -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" https://api.github.com/user
+
+      - name: Create Git Tag and Push
         run: |
           git config --global user.name "github-actions"
           git config --global user.email "github-actions@github.com"
           git tag $env:NEW_TAG
-          git push origin $env:NEW_TAG
+          git push https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/foundRamit/LookAwayApp.git $env:NEW_TAG
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
