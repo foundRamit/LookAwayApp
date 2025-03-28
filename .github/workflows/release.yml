@@ -47,8 +47,8 @@ jobs:
         run: |
           git config --global user.name "github-actions"
           git config --global user.email "github-actions@github.com"
-          git tag $env:NEW_TAG
-          git push https://x-access-token:${{ secrets.PAT_TOKEN }}@github.com/foundRamit/LookAwayApp.git $env:NEW_TAG
+          git tag ${{ env.NEW_TAG }}
+          git push https://x-access-token:${{ secrets.PAT_TOKEN }}@github.com/foundRamit/LookAwayApp.git ${{ env.NEW_TAG }}
         env:
           NEW_TAG: ${{ env.NEW_TAG }}
 
@@ -79,5 +79,3 @@ jobs:
           files: release/*
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-# insert comment here          
