@@ -12,11 +12,13 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Ensures we fetch all tags
 
       - name: Setup .NET
-        uses: actions/setup-dotnet@v4  # Updated to latest version
+        uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: '9.0.202'  # Using exact version for consistency
+          dotnet-version: '9.0.202'
 
       - name: Restore dependencies
         run: dotnet restore
@@ -29,26 +31,29 @@ jobs:
         shell: pwsh
         run: |
           git fetch --tags
-          $LATEST_TAG = git describe --tags --abbrev=0 2>$null
-          if (-not $LATEST_TAG) { $LATEST_TAG = "v0.0.0" }
-          echo "LATEST_TAG=$LATEST_TAG" | Out-File -FilePath $env:GITHUB_ENV -Append
           
+          # Get latest tag (if no tag, default to v0.0.0)
+          $LATEST_TAG = git tag --sort=-v:refname | Select-Object -First 1
+          if (-not $LATEST_TAG) { $LATEST_TAG = "v0.0.0" }
+          echo "Latest tag: $LATEST_TAG"
+
+          # Extract version numbers
           $MAJOR, $MINOR, $PATCH = $LATEST_TAG -replace "v", "" -split "\."
           $NEW_TAG = "v$MAJOR.$MINOR.$($PATCH + 1)"
           echo "NEW_TAG=$NEW_TAG" | Out-File -FilePath $env:GITHUB_ENV -Append
-
+          echo "Generated new tag: $NEW_TAG"
 
       - name: Create Git Tag
         run: |
           git config --global user.name "github-actions"
           git config --global user.email "github-actions@github.com"
-          git tag $NEW_TAG
-          git push origin $NEW_TAG
+          git tag $env:NEW_TAG
+          git push origin $env:NEW_TAG
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Upload artifact
-        uses: actions/upload-artifact@v4  # Updated to latest version
+        uses: actions/upload-artifact@v4
         with:
           name: LookawayApp
           path: release/
@@ -59,7 +64,7 @@ jobs:
 
     steps:
       - name: Download artifact
-        uses: actions/download-artifact@v4  # Updated to latest version
+        uses: actions/download-artifact@v4
         with:
           name: LookawayApp
           path: release/
@@ -73,4 +78,4 @@ jobs:
           prerelease: false
           files: release/*
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}  # Use default GitHub token with correct permissions
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
