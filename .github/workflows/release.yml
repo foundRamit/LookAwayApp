@@ -1,70 +1,67 @@
-name: Lookaway App CI/CD
+name: Release LookawayApp
 
 on:
   push:
-    branches: [ main, develop ]
-    tags:
-      - 'v*'
-  pull_request:
-    branches: [ main, develop ]
-
-env:
-  DOTNET_VERSION: '9.0.x'
-  PROJECT_PATH: './LookawayApp.csproj'
-  ARTIFACT_NAME: 'lookaway-app'
+    branches:
+      - main
 
 jobs:
-  # Build and Test
-  build-and-test:
-    name: Build and Test
+  build:
     runs-on: windows-latest
+
     steps:
-      - uses: actions/checkout@v4
-      
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
       - name: Setup .NET
-        uses: actions/setup-dotnet@v4
+        uses: actions/setup-dotnet@v3
         with:
-          dotnet-version: ${{ env.DOTNET_VERSION }}
-      
+          dotnet-version: '9.0.x'
+
       - name: Restore dependencies
         run: dotnet restore
-      
-      - name: Build
-        run: dotnet build --no-restore --configuration Release
-      
-      - name: Run Unit Tests
-        run: dotnet test --no-build --verbosity normal --configuration Release
-      
-      - name: Publish Artifact
-        run: dotnet publish --configuration Release --output ./publish
-      
-      - name: Upload Build Artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: ${{ env.ARTIFACT_NAME }}
-          path: ./publish
 
-  # Create Release
-  create-release:
-    name: Create GitHub Release
-    needs: build-and-test
-    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v'))
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      
-      - name: Download Artifact
-        uses: actions/download-artifact@v4
+      - name: Build application
+        run: dotnet publish -c Release -r win-x64 --self-contained true -o release/
+
+      - name: Generate new version tag
+        id: versioning
+        run: |
+          git fetch --tags
+          LATEST_TAG=$(git describe --tags --abbrev=0 || echo "v0.0")
+          echo "LATEST_TAG=$LATEST_TAG" >> $GITHUB_ENV
+          NEW_TAG="v$(echo $LATEST_TAG | cut -d'.' -f1).$(echo $LATEST_TAG | cut -d'.' -f2).$(( $(echo $LATEST_TAG | cut -d'.' -f3) + 1 ))"
+          echo "NEW_TAG=$NEW_TAG" >> $GITHUB_ENV
+
+      - name: Create Git Tag
+        run: |
+          git tag $NEW_TAG
+          git push origin $NEW_TAG
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v3
         with:
-          name: ${{ env.ARTIFACT_NAME }}
-          path: ./release
-      
-      - name: Create Release
+          name: LookawayApp
+          path: release/
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Download artifact
+        uses: actions/download-artifact@v3
+        with:
+          name: LookawayApp
+          path: release/
+
+      - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          files: |
-            ./release/*
-          tag_name: ${{ github.ref_name }}
-          generate_release_notes: true
+          tag_name: ${{ env.NEW_TAG }}
+          name: Release ${{ env.NEW_TAG }}
+          draft: false
+          prerelease: false
+          files: release/*
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.REPO_TOKEN }}
