@@ -1,62 +1,70 @@
-name: Build and Release Installer
+name: Lookaway App CI/CD
 
 on:
   push:
-    branches:
-      - main  # Runs when you push to the main branch
+    branches: [ main, develop ]
+    tags:
+      - 'v*'
+  pull_request:
+    branches: [ main, develop ]
+
+env:
+  DOTNET_VERSION: '6.0.x'
+  PROJECT_PATH: './LookawayApp.csproj'
+  ARTIFACT_NAME: 'lookaway-app'
 
 jobs:
-  build:
-    runs-on: windows-latest  # Use Windows for building the installer
-
+  # Build and Test
+  build-and-test:
+    name: Build and Test
+    runs-on: windows-latest
     steps:
-      - name: Checkout Code
-        uses: actions/checkout@v4
-
+      - uses: actions/checkout@v3
+      
       - name: Setup .NET
-        uses: actions/setup-dotnet@v4
+        uses: actions/setup-dotnet@v2
         with:
-          dotnet-version: 9.0.x  # Change to your app's .NET version
-
-      - name: Restore Dependencies
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+      
+      - name: Restore dependencies
         run: dotnet restore
+      
+      - name: Build
+        run: dotnet build --no-restore --configuration Release
+      
+      - name: Run Unit Tests
+        run: dotnet test --no-build --verbosity normal --configuration Release
+      
+      - name: Publish Artifact
+        run: dotnet publish --configuration Release --output ./publish
+      
+      - name: Upload Build Artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: ${{ env.ARTIFACT_NAME }}
+          path: ./publish
 
-      - name: Build the Application
-        run: dotnet build --configuration Release --no-restore
-
-      - name: Publish the Application
-        run: dotnet publish -c Release -o publish
-
-      - name: Create Installer with Inno Setup
-        run: |
-          # Download and install Inno Setup
-          choco install innosetup -y
-          
-          # Create an Inno Setup script (save as setup.iss)
-          @"
-          [Setup]
-          AppName=Lookaway App
-          AppVersion=1.0.0  # Replace with your actual version
-          DefaultDirName={pf}\LookawayApp
-          OutputBaseFilename=LookawayAppInstaller
-          OutputDir=publish
-          DefaultGroupName=Lookaway App
-          UninstallDisplayIcon={app}\LookawayApp.exe
-
-          [Files]
-          Source: 'publish\*'; DestDir: '{app}'; Flags: recursesubdirs
-
-          [Tasks]
-          Name: desktopicon; Description: Create a desktop icon; GroupDescription: Additional icons
-
-          [Icons]
-          Name: "{group}\Lookaway App"; Filename: "{app}\LookawayApp.exe"
-          Name: "{group}\Uninstall Lookaway App"; Filename: "{uninstallexe}"
-          Name: "{commondesktop}\Lookaway App"; Filename: "{app}\LookawayApp.exe"; Tasks: desktopicon
-
-          [Run]
-          Filename: "{app}\LookawayApp.exe"; Description: "Launch Lookaway App"; Flags: postinstall nowait skipifsilent
-          "@ | Out-File -FilePath publish\setup.iss
-
-          # Compile the Inno Setup script
-          iscc publish\setup.iss
+  # Create Release
+  create-release:
+    name: Create GitHub Release
+    needs: build-and-test
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v'))
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Download Artifact
+        uses: actions/download-artifact@v3
+        with:
+          name: ${{ env.ARTIFACT_NAME }}
+          path: ./release
+      
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: |
+            ./release/*
+          tag_name: ${{ github.ref_name }}
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
