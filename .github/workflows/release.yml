@@ -34,7 +34,7 @@ jobs:
           # Example for Inno Setup:
           # iscc path/to/your/installer_script.iss
 
-      - name: Auto Generate Tag  # 🛠 FIXED: Removed extra hyphen
+      - name: Auto Generate Tag
         id: tag
         shell: pwsh
         env:
@@ -56,3 +56,16 @@ jobs:
 
           # Save the tag to GitHub environment
           echo "NEW_TAG=$NEW_TAG" | Out-File -FilePath $env:GITHUB_ENV -Append
+
+      - name: Upload Installer Artifact
+        uses: actions/upload-artifact@v4  # Ensure latest version
+        with:
+          name: LookawayApp_Installer
+          path: publish/LookawayApp_Installer.exe  # Ensure this path is correct
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v1
+        with:
+          token: ${{ secrets.GH_PAT }}  # Use PAT instead of GITHUB_TOKEN
+          tag_name: ${{ env.NEW_TAG }}  # Uses the new tag we generated
+          files: publish/LookawayApp_Installer.exe
