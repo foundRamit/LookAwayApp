@@ -14,11 +14,14 @@ jobs:
       DOTNET_CLI_TELEMETRY_OPTOUT: 1
       PROJECT_PATH: LookawayApp/LookawayApp.csproj
 
+    outputs:
+      NEW_TAG: ${{ steps.versioning.outputs.NEW_TAG }}  # ✅ Expose NEW_TAG to other jobs
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0  # Fetch all tags
+          fetch-depth: 0
           token: ${{ secrets.PAT_TOKEN }}
 
       - name: Setup .NET
@@ -44,7 +47,7 @@ jobs:
             -o release/
 
       - name: Generate version tag
-        id: versioning
+        id: versioning  # ✅ Use 'id' so we can refer to 'outputs'
         shell: pwsh
         run: |
           git fetch --tags
@@ -55,26 +58,27 @@ jobs:
           $NEW_PATCH = [int]$PATCH + 1
           $NEW_TAG = "v$MAJOR.$MINOR.$NEW_PATCH"
           
-          echo "NEW_TAG=$NEW_TAG" | Out-File -FilePath $env:GITHUB_ENV -Append
+          echo "NEW_TAG=$NEW_TAG" | Out-File -FilePath $env.GITHUB_ENV -Append
+          echo "NEW_TAG=$NEW_TAG" >> $env.GITHUB_OUTPUT  # ✅ Store as an output
           echo "Generated new tag: $NEW_TAG"
 
       - name: Create Git Tag and Push
         run: |
           git config --local user.email "action[bot]@github.com"
           git config --local user.name "github-actions[bot]"
-          git tag ${{ env.NEW_TAG }}
-          git push https://x-access-token:${{ secrets.PAT_TOKEN }}@github.com/foundRamit/LookAwayApp.git ${{ env.NEW_TAG }}
+          git tag ${{ steps.versioning.outputs.NEW_TAG }}
+          git push https://x-access-token:${{ secrets.PAT_TOKEN }}@github.com/foundRamit/LookAwayApp.git ${{ steps.versioning.outputs.NEW_TAG }}
 
       - name: ZIP Application
         shell: pwsh
         run: |
-          Compress-Archive -Path release/* -DestinationPath LookawayApp_${{ env.NEW_TAG }}.zip
+          Compress-Archive -Path release/* -DestinationPath LookawayApp_${{ steps.versioning.outputs.NEW_TAG }}.zip
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: LookawayApp
-          path: LookawayApp_${{ env.NEW_TAG }}.zip
+          path: LookawayApp_${{ steps.versioning.outputs.NEW_TAG }}.zip
 
   release:
     needs: build
@@ -89,8 +93,8 @@ jobs:
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ env.NEW_TAG }}
-          name: Release ${{ env.NEW_TAG }}
+          tag_name: ${{ needs.build.outputs.NEW_TAG }}  # ✅ Now correctly gets NEW_TAG
+          name: Release ${{ needs.build.outputs.NEW_TAG }}
           draft: false
           prerelease: false
           files: LookawayApp_*.zip
