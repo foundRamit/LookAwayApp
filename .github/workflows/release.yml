@@ -15,13 +15,13 @@ jobs:
       PROJECT_PATH: LookawayApp/LookawayApp.csproj
 
     outputs:
-      NEW_TAG: ${{ steps.versioning.outputs.NEW_TAG }}  # ✅ Expose NEW_TAG to other jobs
+      NEW_TAG: ${{ steps.versioning.outputs.NEW_TAG }}  # ✅ Pass NEW_TAG to next job
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0
+          fetch-depth: 0  # Fetch all tags
           token: ${{ secrets.PAT_TOKEN }}
 
       - name: Setup .NET
@@ -47,27 +47,28 @@ jobs:
             -o release/
 
       - name: Generate version tag
-        id: versioning  # ✅ Use 'id' so we can refer to 'outputs'
+        id: versioning  # ✅ Add ID to access outputs
         shell: pwsh
         run: |
           git fetch --tags
           $LATEST_TAG = git tag --sort=-v:refname | Select-Object -First 1
           if (-not $LATEST_TAG) { $LATEST_TAG = "v0.0.0" }
-          
+
           $MAJOR, $MINOR, $PATCH = $LATEST_TAG -replace "v", "" -split "\."
           $NEW_PATCH = [int]$PATCH + 1
           $NEW_TAG = "v$MAJOR.$MINOR.$NEW_PATCH"
-          
-          echo "NEW_TAG=$NEW_TAG" | Out-File -FilePath $env.GITHUB_ENV -Append
-          echo "NEW_TAG=$NEW_TAG" >> $env.GITHUB_OUTPUT  # ✅ Store as an output
-          echo "Generated new tag: $NEW_TAG"
+
+          echo "NEW_TAG=$NEW_TAG" | Tee-Object -FilePath $env:GITHUB_ENV -Append
+          echo "NEW_TAG=$NEW_TAG" | Tee-Object -FilePath $env:GITHUB_OUTPUT -Append  # ✅ Store in outputs
+
+          Write-Output "Generated new tag: $NEW_TAG"
 
       - name: Create Git Tag and Push
         run: |
           git config --local user.email "action[bot]@github.com"
           git config --local user.name "github-actions[bot]"
           git tag ${{ steps.versioning.outputs.NEW_TAG }}
-          git push https://x-access-token:${{ secrets.PAT_TOKEN }}@github.com/foundRamit/LookAwayApp.git ${{ steps.versioning.outputs.NEW_TAG }}
+          git push https://x-access-token:${{ secrets.PAT_TOKEN }}@github.com/foundRamit/LookawayApp.git ${{ steps.versioning.outputs.NEW_TAG }}
 
       - name: ZIP Application
         shell: pwsh
@@ -93,7 +94,7 @@ jobs:
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ needs.build.outputs.NEW_TAG }}  # ✅ Now correctly gets NEW_TAG
+          tag_name: ${{ needs.build.outputs.NEW_TAG }}  # ✅ Correctly reference NEW_TAG
           name: Release ${{ needs.build.outputs.NEW_TAG }}
           draft: false
           prerelease: false
