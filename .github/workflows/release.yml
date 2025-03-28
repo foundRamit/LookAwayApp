@@ -43,7 +43,7 @@ jobs:
           echo "NEW_TAG=$NEW_TAG" | Out-File -FilePath $env:GITHUB_ENV -Append
           echo "Generated new tag: $NEW_TAG"
 
-      - name: Create Git Tag
+      - name: Create Git Tag and Push
         run: |
           git config --global user.name "github-actions"
           git config --global user.email "github-actions@github.com"
@@ -78,4 +78,4 @@ jobs:
           prerelease: false
           files: release/*
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TOKEN: ${{ secrets.PAT_TOKEN }}
