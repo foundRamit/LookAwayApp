@@ -2,10 +2,9 @@ name: Build and Release Installer
 
 on:
   push:
-    branches:
-      - main
-  release:
-    types: [created]
+    tags:
+      - "v*.*.*"  # Triggers only when a version tag like v1.0.0 is pushed
+
 
 jobs:
   release:
