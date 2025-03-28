@@ -48,9 +48,11 @@ jobs:
           git config --global user.name "github-actions"
           git config --global user.email "github-actions@github.com"
           git tag ${{ env.NEW_TAG }}
-          git push https://x-access-token:${{ secrets.PAT_TOKEN }}@github.com/foundRamit/LookAwayApp.git ${{ env.NEW_TAG }}
+          git remote set-url origin https://x-access-token:${{ secrets.PAT_TOKEN }}@github.com/foundRamit/LookAwayApp.git
+          git push origin ${{ env.NEW_TAG }}
         env:
           NEW_TAG: ${{ env.NEW_TAG }}
+
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
