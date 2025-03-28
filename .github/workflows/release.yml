@@ -1,0 +1,25 @@
+name: Build and Release Installer
+
+on:
+  push:
+    branches:
+      - main
+  release:
+    types: [created]
+
+jobs:
+  release:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v3
+
+      - name: Upload Installer to GitHub Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: LookawayApp_Installer.exe
+          token: ${{ secrets.GITHUB_TOKEN }}
+          tag_name: ${{ github.ref }}
+          draft: false
+          prerelease: false
