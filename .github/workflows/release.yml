@@ -9,7 +9,7 @@ on:
     branches: [ main, develop ]
 
 env:
-  DOTNET_VERSION: '6.0.x'
+  DOTNET_VERSION: '9.0.x'
   PROJECT_PATH: './LookawayApp.csproj'
   ARTIFACT_NAME: 'lookaway-app'
 
