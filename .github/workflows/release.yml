@@ -18,7 +18,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0  # Ensure all tags are fetched
+          fetch-depth: 0  # Fetch all tags
 
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
@@ -57,7 +57,7 @@ jobs:
           echo "NEW_TAG=$NEW_TAG" | Out-File -FilePath $env:GITHUB_ENV -Append
           echo "Generated new tag: $NEW_TAG"
 
-      - name: Create Git Tag
+      - name: Create Git Tag and Push
         run: |
           git config --global user.name "GitHub Actions"
           git config --global user.email "actions@github.com"
@@ -94,4 +94,4 @@ jobs:
           prerelease: false
           files: LookawayApp_*.zip
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.PAT_TOKEN }}
