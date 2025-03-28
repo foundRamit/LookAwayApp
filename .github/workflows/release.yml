@@ -9,6 +9,10 @@ jobs:
   build:
     runs-on: windows-latest
 
+    env:
+      DOTNET_SKIP_FIRST_TIME_EXPERIENCE: 1
+      DOTNET_CLI_TELEMETRY_OPTOUT: 1
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -18,13 +22,19 @@ jobs:
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: '9.0.202'
+          dotnet-version: '9.0.202'  # Exact version you specified
 
       - name: Restore dependencies
         run: dotnet restore
 
       - name: Build application
-        run: dotnet publish -c Release -r win-x64 --self-contained true -o release/
+        run: dotnet build -c Release
+
+      - name: Run tests
+        run: dotnet test -c Release --no-build
+
+      - name: Publish application
+        run: dotnet publish -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:PublishTrimmed=true -o release/
 
       - name: Generate new version tag
         id: versioning
@@ -39,27 +49,30 @@ jobs:
 
           # Extract version numbers
           $MAJOR, $MINOR, $PATCH = $LATEST_TAG -replace "v", "" -split "\."
-          $NEW_TAG = "v$MAJOR.$MINOR.$($PATCH + 1)"
-          echo "NEW_TAG=$NEW_TAG" | Out-File -FilePath $env:GITHUB_ENV -Append
+          $NEW_PATCH = [int]$PATCH + 1
+          $NEW_TAG = "v$MAJOR.$MINOR.$NEW_PATCH"
+          
+          echo "NEW_TAG=$NEW_TAG" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
           echo "Generated new tag: $NEW_TAG"
 
-      - name: Create Git Tag and Push
-        
+      - name: Create Git Tag
         run: |
           git config --global user.name "github-actions"
           git config --global user.email "github-actions@github.com"
-          git tag ${{ env.NEW_TAG }}
+          git tag ${{ steps.versioning.outputs.NEW_TAG }}
           git remote set-url origin https://x-access-token:${{ secrets.PAT_TOKEN }}@github.com/foundRamit/LookAwayApp.git
-          git push origin ${{ env.NEW_TAG }}
-        env:
-          NEW_TAG: ${{ env.NEW_TAG }}
+          git push origin ${{ steps.versioning.outputs.NEW_TAG }}
 
+      - name: ZIP Application
+        shell: pwsh
+        run: |
+          Compress-Archive -Path release/* -DestinationPath LookawayApp_${{ steps.versioning.outputs.NEW_TAG }}.zip
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: LookawayApp
-          path: release/
+          path: LookawayApp_${{ steps.versioning.outputs.NEW_TAG }}.zip
 
   release:
     needs: build
@@ -70,15 +83,14 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: LookawayApp
-          path: release/
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ env.NEW_TAG }}
-          name: Release ${{ env.NEW_TAG }}
+          tag_name: ${{ needs.build.outputs.NEW_TAG }}
+          name: Release ${{ needs.build.outputs.NEW_TAG }}
           draft: false
           prerelease: false
-          files: release/*
+          files: LookawayApp_*.zip
         env:
-          TOKEN: ${{ secrets.PAT_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.PAT_TOKEN }}
