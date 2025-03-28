@@ -16,7 +16,7 @@ jobs:
       - name: Setup .NET
         uses: actions/setup-dotnet@v3
         with:
-          dotnet-version: 6.0.x  # Change to your app's .NET version
+          dotnet-version: 9.0.x  # Change to your app's .NET version
 
       - name: Restore Dependencies
         run: dotnet restore
@@ -40,19 +40,34 @@ jobs:
         env:
           GH_PAT: ${{ secrets.GH_PAT }}  # Use the stored GitHub Token
         run: |
-          $timestamp = Get-Date -UFormat "%s"  # Get Unix timestamp
+          $timestamp = Get-Date -UFormat "%Y%m%d%H%M%S"  # Get a unique timestamp
           $NEW_TAG = "v1.0.$timestamp"
-          
-          # Configure Git with GitHub Actions credentials
+
+          # Configure Git
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
 
-          # Authenticate using Personal Access Token
+          # Authenticate using PAT (Fixes 403 error)
           git remote set-url origin https://x-access-token:${{ secrets.GH_PAT }}@github.com/${{ github.repository }}.git
 
           # Create and push the tag
-          git tag $NEW_TAG
+          git tag -a $NEW_TAG -m "Release $NEW_TAG"
           git push origin $NEW_TAG
 
-          # Save the tag to GitHub environment
+          # Save the tag for later use
           echo "NEW_TAG=$NEW_TAG" | Out-File -FilePath $env:GITHUB_ENV -Append
+
+      - name: Upload Installer Artifact
+        uses: actions/upload-artifact@v4  # Fixed version issue
+        with:
+          name: LookawayApp_Installer
+          path: publish/LookawayApp_Installer.exe  # Ensure this path is correct
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v1
+        with:
+          token: ${{ secrets.GH_PAT }}  # Use the stored GitHub Token
+          tag_name: ${{ env.NEW_TAG }}  # Uses the new tag we generated
+          name: "Release ${{ env.NEW_TAG }}"  # Adds a name to the release
+          body: "Automated release for version ${{ env.NEW_TAG }}."
+          files: publish/LookawayApp_Installer.exe
