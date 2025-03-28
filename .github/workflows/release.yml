@@ -36,9 +36,11 @@ jobs:
 
       - name: Auto Generate Tag
         id: tag
+        shell: pwsh
         run: |
-          NEW_TAG=v1.0.$(date +%s)  # Generates a unique version based on timestamp
-          echo "NEW_TAG=$NEW_TAG" >> $GITHUB_ENV
+          $timestamp = Get-Date -UFormat "%s"  # Get Unix timestamp
+          $NEW_TAG = "v1.0.$timestamp"
+          echo "NEW_TAG=$NEW_TAG" | Out-File -FilePath $env:GITHUB_ENV -Append
           git tag $NEW_TAG
           git push origin $NEW_TAG
 
