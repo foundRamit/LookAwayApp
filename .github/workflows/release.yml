@@ -38,12 +38,12 @@ jobs:
         id: tag
         shell: pwsh
         env:
-          GH_PAT: ${{ secrets.GH_PAT }}  # Use Personal Access Token
+          GH_PAT: ${{ secrets.GH_PAT }}  # Use the stored GitHub Token
         run: |
           $timestamp = Get-Date -UFormat "%s"  # Get Unix timestamp
           $NEW_TAG = "v1.0.$timestamp"
           
-          # Configure Git with GitHub Actions bot credentials
+          # Configure Git with GitHub Actions credentials
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
 
