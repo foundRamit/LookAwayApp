@@ -27,19 +27,19 @@
     <Border CornerRadius="12" Padding="10">
         <Border.Background>
             <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
-                <GradientStop Color="#FFF3E0" Offset="0"/>
-                <GradientStop Color="#FFCCBC" Offset="1"/>
+                <GradientStop Color="#FFF9F5" Offset="0"/>
+                <GradientStop Color="#FFE0D5" Offset="1"/>
             </LinearGradientBrush>
         </Border.Background>
 
         <Border.Effect>
-            <DropShadowEffect BlurRadius="10" ShadowDepth="2" Color="Black" Opacity="0.4"/>
+            <DropShadowEffect BlurRadius="10" ShadowDepth="2" Color="Black" Opacity="0.2"/>
         </Border.Effect>
 
         <Grid>
             <TextBlock x:Name="CountdownLabel"
                        Text="00:00"
-                       Foreground="#FF5722"
+                       Foreground="#FF6B6B"
                        FontSize="20"
                        FontWeight="Bold"
                        HorizontalAlignment="Center"
@@ -50,11 +50,21 @@
                     Height="20"
                     FontSize="14"
                     Foreground="White"
-                    Background="#FF5722"
+                    Background="#FF6B6B"
                     HorizontalAlignment="Right"
                     VerticalAlignment="Top"
                     Click="CloseButton_Click"
-                    Padding="0,-2,0,0"/>
+                    Padding="0,-2,0,0">
+                <Button.Template>
+                    <ControlTemplate TargetType="Button">
+                        <Border Background="{TemplateBinding Background}" 
+                                CornerRadius="10">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                    </ControlTemplate>
+                </Button.Template>
+            </Button>
         </Grid>
     </Border>
 </Window>
+

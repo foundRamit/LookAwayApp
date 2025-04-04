@@ -1,6 +1,7 @@
 ﻿using System;
 using System.ComponentModel;
 using System.Windows;
+using System.Windows.Controls;
 using System.Windows.Threading;
 using System.Windows.Forms; // For system tray support
 using System.Drawing;
@@ -32,8 +33,8 @@ namespace LookawayApp
             _reminderTimer = new DispatcherTimer { Interval = _reminderInterval };
             _reminderTimer.Tick += Reminder_Tick;
 
-            _workDuration = TimeSpan.FromMinutes(1);
-            _breakDuration = TimeSpan.FromSeconds(15);
+            _workDuration = TimeSpan.FromMinutes(20);
+            _breakDuration = TimeSpan.FromSeconds(20);
             _currentTime = _workDuration;
             UpdateTimerDisplay(_currentTime);
 
@@ -66,6 +67,30 @@ namespace LookawayApp
                 e.Cancel = true;
                 Hide();
             }
+        }
+
+        private void TabButton_Click(object sender, RoutedEventArgs e)
+        {
+            // Reset all tab buttons to inactive style
+            QuickStartTab.Style = (Style)FindResource("TabButtonStyle");
+            RoutinesTab.Style = (Style)FindResource("TabButtonStyle");
+            SettingsTab.Style = (Style)FindResource("TabButtonStyle");
+            
+            // Hide all content
+            QuickStartContent.Visibility = Visibility.Collapsed;
+            RoutinesContent.Visibility = Visibility.Collapsed;
+            SettingsContent.Visibility = Visibility.Collapsed;
+            
+            // Set active tab and show content; using fully-qualified type for Button:
+            System.Windows.Controls.Button clickedButton = (System.Windows.Controls.Button)sender;
+            clickedButton.Style = (Style)FindResource("ActiveTabButtonStyle");
+            
+            if (clickedButton == QuickStartTab)
+                QuickStartContent.Visibility = Visibility.Visible;
+            else if (clickedButton == RoutinesTab)
+                RoutinesContent.Visibility = Visibility.Visible;
+            else if (clickedButton == SettingsTab)
+                SettingsContent.Visibility = Visibility.Visible;
         }
 
         private void StartButton_Click(object sender, RoutedEventArgs e)
@@ -259,3 +284,4 @@ namespace LookawayApp
         }
     }
 }
+

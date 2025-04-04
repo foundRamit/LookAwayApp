@@ -7,9 +7,9 @@ namespace LookawayApp
 {
     public class SystemTray : IDisposable
     {
-        private NotifyIcon _notifyIcon;
-        private ContextMenuStrip _contextMenu;
-        private MainWindow _mainWindow;
+        private NotifyIcon _notifyIcon = null!; // Use null! to tell compiler we'll initialize it
+        private ContextMenuStrip _contextMenu = null!; // Use null! to tell compiler we'll initialize it
+        private readonly MainWindow _mainWindow;
         private readonly Icon _appIcon;
 
         public event EventHandler? StartTimer;
@@ -19,7 +19,7 @@ namespace LookawayApp
 
         public SystemTray(MainWindow mainWindow)
         {
-            _mainWindow = mainWindow;
+            _mainWindow = mainWindow ?? throw new ArgumentNullException(nameof(mainWindow));
             _appIcon = SystemIcons.Application;
             InitializeContextMenu();
             InitializeNotifyIcon();
