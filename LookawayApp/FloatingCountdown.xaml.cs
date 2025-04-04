@@ -16,14 +16,18 @@ namespace LookawayApp
             this.Topmost = true;
             this.ShowInTaskbar = false;
 
-            // Set up timer
-            _countdownTimer = new DispatcherTimer();
-            _countdownTimer.Interval = TimeSpan.FromSeconds(1);
+            _countdownTimer = new DispatcherTimer
+            {
+                Interval = TimeSpan.FromSeconds(1)
+            };
             _countdownTimer.Tick += CountdownTimer_Tick;
         }
 
         public void StartCountdown(int seconds)
         {
+            if (_countdownTimer.IsEnabled)
+                _countdownTimer.Stop();
+
             _secondsLeft = seconds;
             UpdateCountdown(_secondsLeft);
             _countdownTimer.Start();
@@ -40,26 +44,28 @@ namespace LookawayApp
             else
             {
                 _countdownTimer.Stop();
-                Hide(); // Hide instead of closing
+                Hide();
             }
         }
 
         public void UpdateCountdown(int secondsLeft)
         {
             CountdownLabel.Text = TimeSpan.FromSeconds(secondsLeft).ToString(@"mm\:ss");
+            // If CountdownLabel is a Label, use:
+            // CountdownLabel.Content = ...
         }
 
         private void Window_MouseDown(object sender, MouseButtonEventArgs e)
         {
             if (e.ChangedButton == MouseButton.Left)
             {
-                DragMove(); // Allows window dragging
+                DragMove();
             }
         }
 
         private void CloseButton_Click(object sender, RoutedEventArgs e)
         {
-            Hide(); // Hides instead of closing Lookaway
+            Hide();
         }
     }
 }

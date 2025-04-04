@@ -1,6 +1,6 @@
 ﻿using System.Windows;
 
-namespace LookawayClone
+namespace LookawayApp
 {
     public partial class App : Application
     {

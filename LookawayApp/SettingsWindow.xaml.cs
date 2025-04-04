@@ -1,10 +1,16 @@
-using System;
+using System.IO;
 using System.Windows;
+using Newtonsoft.Json;
 
-namespace LookawayClone
+namespace LookawayApp
 {
     public partial class SettingsWindow : Window
     {
+        private const string SettingsFile = "settings.json";
+
+        public int FocusTime { get; private set; }
+        public int RestTime { get; private set; }
+
         public SettingsWindow()
         {
             InitializeComponent();
@@ -13,33 +19,43 @@ namespace LookawayClone
 
         private void LoadSettings()
         {
-            FocusTimeTextBox.Text = Properties.Settings.Default.FocusTime.ToString();
-            RestTimeTextBox.Text = Properties.Settings.Default.RestTime.ToString();
+            if (File.Exists(SettingsFile))
+            {
+                var json = File.ReadAllText(SettingsFile);
+                var settings = JsonConvert.DeserializeObject<UserSettings>(json);
+
+                if (settings != null)
+                {
+                    FocusTimeTextBox.Text = settings.FocusTime.ToString();
+                    RestTimeTextBox.Text = settings.RestTime.ToString();
+                }
+            }
         }
 
         private void SaveSettings_Click(object sender, RoutedEventArgs e)
         {
-            try
+            if (int.TryParse(FocusTimeTextBox.Text, out int focusTime) &&
+                int.TryParse(RestTimeTextBox.Text, out int restTime) &&
+                focusTime > 0 && restTime > 0)
             {
-                int focusTime = int.Parse(FocusTimeTextBox.Text);
-                int restTime = int.Parse(RestTimeTextBox.Text);
-
-                if (focusTime <= 0 || restTime <= 0)
+                var settings = new UserSettings
                 {
-                    MessageBox.Show("Time values must be positive numbers.", "Invalid Input", MessageBoxButton.OK, MessageBoxImage.Warning);
-                    return;
-                }
+                    FocusTime = focusTime,
+                    RestTime = restTime
+                };
 
-                Properties.Settings.Default.FocusTime = focusTime;
-                Properties.Settings.Default.RestTime = restTime;
-                Properties.Settings.Default.Save();
-                
+                var json = JsonConvert.SerializeObject(settings, Formatting.Indented);
+                File.WriteAllText(SettingsFile, json);
+
+                FocusTime = focusTime;
+                RestTime = restTime;
+
                 this.DialogResult = true;
                 Close();
             }
-            catch (FormatException)
+            else
             {
-                MessageBox.Show("Please enter valid numbers for time values.", "Invalid Input", MessageBoxButton.OK, MessageBoxImage.Warning);
+                MessageBox.Show("Please enter valid positive numbers.");
             }
         }
 
@@ -47,6 +63,12 @@ namespace LookawayClone
         {
             this.DialogResult = false;
             Close();
+        }
+
+        public class UserSettings
+        {
+            public int FocusTime { get; set; }
+            public int RestTime { get; set; }
         }
     }
 }
